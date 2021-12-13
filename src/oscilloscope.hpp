@@ -46,6 +46,10 @@
 #include <QQueue>
 #include <QThreadPool>
 
+#ifdef ADVANCED_DOCKING
+#include <DockWidget.h>
+#endif
+
 /* Local includes */
 #include "apiObject.hpp"
 #include "oscilloscope_plot.hpp"
@@ -248,6 +252,10 @@ namespace adiscope {
 		void disableMixedSignalView();
 		void setDigitalPlotCurvesParams();
 
+#ifdef ADVANCED_DOCKING
+		void toggleDock(ads::CDockWidget* dock, bool toggled, bool d1, bool d2);
+#endif
+
 	public Q_SLOTS:
 		void requestAutoset();
 		void enableLabels(bool);
@@ -314,10 +322,14 @@ namespace adiscope {
 		CustomPlotPositionButton *cursorsPositionButton;
 
 		QGridLayout* gridPlot;
-		QDockWidget* fftDocker;
-		QDockWidget* xyDocker;
-		QDockWidget* histDocker;
+#ifdef ADVANCED_DOCKING
+		ads::CDockManager* m_dockManager;
+		ads::CDockWidget* fftDocker;
+		ads::CDockWidget* xyDocker;
+		ads::CDockWidget* histDocker;
+
 		QWidget* histWidget;
+#endif
 
 		MouseWheelWidgetGuard *wheelEventGuard;
 
