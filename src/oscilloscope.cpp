@@ -839,7 +839,7 @@ Oscilloscope::Oscilloscope(struct iio_context *ctx, Filter *filt,
 #ifdef __ANDROID__
 	ui->btnAddMath->setIconSize(QSize(24, 24));
 #endif
-
+	plot.replot();
 }
 
 int Oscilloscope::binSearchPointOnXaxis(double time)
@@ -1033,7 +1033,6 @@ void Oscilloscope::add_ref_waveform(QString name, QVector<double> xData, QVector
 
 	plot.showYAxisWidget(curve_id, true);
 	plot.setVertUnitsPerDiv(1, curve_id); // force v/div to 1
-	plot.zoomBaseUpdate();
 	init_selected_measurements(curve_id, {0, 1, 4, 5});
 
 	plot.computeMeasurementsForChannel(curve_id, sampleRate);
@@ -1152,7 +1151,6 @@ void Oscilloscope::add_ref_waveform(unsigned int chIdx)
 
 	plot.showYAxisWidget(curve_id, true);
 	plot.setVertUnitsPerDiv(1, curve_id); // force v/div to 1
-	plot.zoomBaseUpdate();
 	init_selected_measurements(curve_id, {0, 1, 4, 5});
 }
 
@@ -3291,8 +3289,6 @@ void adiscope::Oscilloscope::onVertScaleValueChanged(double value)
 	cancelZoom();
 	if (value != plot.VertUnitsPerDiv(current_ch_widget)) {
 		plot.setVertUnitsPerDiv(value, current_ch_widget);
-		plot.replot();
-		plot.zoomBaseUpdate();
 	}
 	voltsPosition->setStep(value / 10);
 
@@ -3306,8 +3302,8 @@ void adiscope::Oscilloscope::onVertScaleValueChanged(double value)
 	if (current_ch_widget == index_y) {
 		xy_plot.setVertUnitsPerDiv(value, QwtPlot::yLeft);
 	}
-	xy_plot.replot();
-	xy_plot.zoomBaseUpdate();
+//	xy_plot.replot();
+//	xy_plot.zoomBaseUpdate();
 
 	if (current_ch_widget < nb_channels) {
 		trigger_settings.setTriggerLevelStep(current_ch_widget, value);
@@ -3371,12 +3367,12 @@ void Oscilloscope::onCmbMemoryDepthChanged(QString value)
 		setSinksDisplayOneBuffer(false);
 	}
 
-	plot.replot();
 	plot.setXAxisNumPoints(bufferSize);
 	plot.setHorizOffset(params.timePos);
 	plot.setDataStartingPoint(active_trig_sample_count);
 	plot.resetXaxisOnNextReceivedData();
-	plot.zoomBaseUpdate();
+	plot.cancelZoom();
+
 
 	if (zoom_level == 0) {
 		noZoomXAxisWidth = plot.axisInterval(QwtPlot::xBottom).width();
@@ -3469,10 +3465,8 @@ void adiscope::Oscilloscope::onHorizScaleValueChanged(double value)
 	plot.replot();
 	plot.setDataStartingPoint(active_trig_sample_count);
 	plot.resetXaxisOnNextReceivedData();
-	plot.zoomBaseUpdate();
 	plot.setXAxisNumPoints(0);
 
-	hist_plot.zoomBaseUpdate();
 	hist_plot.replot();
 
 	ch_ui->cmbMemoryDepth->setCurrentIndex(0);
@@ -3599,10 +3593,8 @@ void adiscope::Oscilloscope::onVertOffsetValueChanged(double value)
 
 	if (value != -plot.VertOffset(current_ch_widget)) {
 		plot.setVertOffset(-value, current_ch_widget);
-		plot.replot();
 	}
 
-	plot.zoomBaseUpdate();
 	scaleHistogramPlot();
 
 	updateXyPlotScales();
@@ -3659,9 +3651,6 @@ void adiscope::Oscilloscope::onTimePositionChanged(double value)
 	plot.replot();
 	plot.setDataStartingPoint(active_trig_sample_count);
 	plot.resetXaxisOnNextReceivedData();
-
-	if (zoom_level == 0)
-		plot.zoomBaseUpdate();
 
 	if (started) {
 		trigger_settings.setTriggerDelay(active_trig_sample_count);

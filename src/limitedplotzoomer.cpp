@@ -24,7 +24,7 @@ using namespace adiscope;
 
 LimitedPlotZoomer::LimitedPlotZoomer(QWidget *parent, bool doReplot):
 	QwtPlotZoomer(parent, doReplot),
-	m_boundVertical(false)
+	m_boundVertical(false), m_updateBaseNextZoom(true)
 {
         setMaxStackDepth(5);
 }
@@ -32,6 +32,7 @@ LimitedPlotZoomer::LimitedPlotZoomer(QWidget *parent, bool doReplot):
 void LimitedPlotZoomer::resetZoom()
 {
 	QwtPlotZoomer::zoom(0);
+	m_updateBaseNextZoom = true;
 }
 
 void LimitedPlotZoomer::popZoom()
@@ -46,6 +47,11 @@ void LimitedPlotZoomer::setBoundVertical(bool bound)
 
 void LimitedPlotZoomer::zoom(const QRectF &rect)
 {
+	if(m_updateBaseNextZoom) {
+		setZoomBase();
+		m_updateBaseNextZoom = false;
+	}
+
 	QRectF boundedRect = rect & zoomBase();
 
 	if (m_boundVertical) {

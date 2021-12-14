@@ -487,7 +487,7 @@ SignalGenerator::SignalGenerator(struct iio_context *_ctx, Filter *filt,
 	                          ((double) sample_rate * 10.0));
 	plot->setHorizOffset((double) nb_points /
 	                     ((double) sample_rate * 2.0));
-	plot->zoomBaseUpdate();
+	plot->zoomBaseUpdate(true);
 	ui->plot->insertWidget(0,plot, 0, 0);
 
 	connect(ui->btnAppearanceCollapse, SIGNAL(toggled(bool)),ui->wAppearance, SLOT(setVisible(bool)));

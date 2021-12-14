@@ -48,6 +48,8 @@ int main(int argc, char **argv)
 #ifdef  __ANDROID__
 	qputenv("QT_SCALE_FACTOR", "1.17");
 	QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+	QApplication::setAttribute(Qt::AA_CompressHighFrequencyEvents, true);
+	QApplication::setAttribute(Qt::AA_CompressTabletEvents, true);
 #endif
 
 
@@ -66,13 +68,13 @@ int main(int argc, char **argv)
 
 #ifdef Q_OS_WIN
 	google_breakpad::ExceptionHandler eh(L"C:/dumps/",
-					     NULL,
-					     ScopyApplication::dumpCallback,
-					     NULL,
-					     google_breakpad::ExceptionHandler::HANDLER_ALL,
-					     MiniDumpNormal,
-					     (wchar_t*)NULL,
-					     NULL);
+						 NULL,
+						 ScopyApplication::dumpCallback,
+						 NULL,
+						 google_breakpad::ExceptionHandler::HANDLER_ALL,
+						 MiniDumpNormal,
+						 (wchar_t*)NULL,
+						 NULL);
 #endif
 	app.setExceptionHandler(&eh);
 #endif
@@ -176,7 +178,7 @@ int main(int argc, char **argv)
 
 	bool nonativedialog = parser.isSet("nonativedialog");
 #ifdef NONATIVE
-    nonativedialog = true;
+	nonativedialog = true;
 #endif
 	qDebug() << "Using" << (nonativedialog ? "Qt" : "Native") << "file dialogs";
 	launcher.setNativeDialogs(!nonativedialog);

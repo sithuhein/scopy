@@ -437,18 +437,12 @@ void HistogramDisplayPlot::setYaxisSpan(unsigned int chIdx, double bot, double t
 		return;
 	}
 
-	_resetZoom();
 	if (d_orientation == Qt::Vertical) {
 		setAxisScale(QwtAxisId(QwtPlot::xBottom, chIdx), bot, top);
-		replot();
-		zoomBaseUpdate();
 		return;
 	}
 
 	setAxisScale(QwtAxisId(QwtPlot::yLeft, chIdx), bot, top);
-
-	replot();
-	zoomBaseUpdate();
 }
 
 void HistogramDisplayPlot::setXaxisSpan(double start, double stop)
@@ -705,7 +699,6 @@ void HistogramDisplayPlot::_orientationChanged()
 		}
 	}
 
-	zoomBaseUpdate();
 	for (int i = 0; i < d_zoomer.size(); ++i) {
 		d_zoomer[i]->setEnabled(d_orientation == Qt::Horizontal
 					? false : true);

@@ -52,6 +52,7 @@ void HandlesArea::mousePressEvent(QMouseEvent *event)
 		selectedItem = child;
 		hotspot = event->pos() - child->pos();
 		child->setGrabbed(true);
+		event->accept();
 	}
 }
 

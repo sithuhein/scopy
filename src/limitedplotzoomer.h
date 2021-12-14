@@ -38,6 +38,7 @@ protected:
 
 private:
 	bool m_boundVertical;
+	bool m_updateBaseNextZoom;
 };
 }
 
