@@ -62,6 +62,9 @@ Tool::Tool(struct iio_context *ctx, ToolMenuItem *toolMenuItem,
 #endif
 	connect(this, &Tool::detachedState,
 		toolMenuItem, &ToolMenuItem::setDetached);
+
+	// TODO: remove this after ToolLauncher refactoring
+	this->setVisible(false);
 }
 
 Tool::~Tool()
