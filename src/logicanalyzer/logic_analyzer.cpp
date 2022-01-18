@@ -270,10 +270,10 @@ LogicAnalyzer::~LogicAnalyzer()
 		m_captureThread = nullptr;
 	}
 
-	for (auto &curve : m_plotCurves) {
+/*	for (auto &curve : m_plotCurves) {  // WHY DOES THIS SUDDENLY CRASH ?
 		m_plot.removeDigitalPlotCurve(curve);
 		delete curve;
-	}
+	}*/
 
 	if (m_buffer) {
 		delete[] m_buffer;
