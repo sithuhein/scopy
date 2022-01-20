@@ -121,8 +121,6 @@ namespace adiscope {
       plot->setNumBins(d_bins);
       plot->setXaxis(d_xmin, d_xmax);
 
-      // initialize update time to 10 times a second
-      set_update_time(0.1);
     }
 
     void
