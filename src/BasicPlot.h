@@ -48,6 +48,7 @@ public Q_SLOTS:
 protected:
 	QTimer replotTimer;
 private:
+	static int staticPlotId;
 	bool started;
 	bool debug;
 	bool useOpenGlCanvas;
@@ -55,10 +56,11 @@ private:
 	int id = 0;
 	MovingAverage pfps, pms;
 	MovingAverage ifps, ims;
-	const int fpsHistoryCount = 10;
+	const int fpsHistoryCount = 30;
 	QwtPlotTextLabel fpsLabel;
 	QwtText fpsTxt;
 	QElapsedTimer fpsTimer;
+
 
 };
 
