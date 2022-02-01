@@ -54,6 +54,7 @@ int main(int argc, char **argv)
 #endif
 
 
+	QApplication::setAttribute(Qt::AA_ShareOpenGLContexts,true);
 	ScopyApplication app(argc, argv);
 	qDebug()<<QApplication::testAttribute(Qt::AA_CompressHighFrequencyEvents) << QApplication::testAttribute(Qt::AA_CompressHighFrequencyEvents);
 #ifdef LIBM2K_ENABLE_LOG
