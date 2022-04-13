@@ -1772,7 +1772,13 @@ void LogicAnalyzer::resetViewport()
 void LogicAnalyzer::fitViewport(double min, double max)
 {
 	if (min >= max) return;
-	m_plot.setTimeTriggerInterval(min, max);
+	// Center between min and max
+	const auto dx = max - min;
+	const auto center = min + dx/2;
+	m_plot.setHorizOffset(center);
+	m_horizOffset = center;
+
+	// TODO: Zoom in automatically
 	m_plot.replot();
 };
 
