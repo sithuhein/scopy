@@ -46,6 +46,7 @@ public:
 	double getPixelOffset() const;
 	double getTraceHeight() const;
 	double getSampleRate() const;
+	double getTotalTime() const;
 	double getTimeTriggerOffset() const;
 	uint64_t getBufferSize() const;
 
@@ -65,13 +66,12 @@ public:
 	virtual void dataAvailable(uint64_t from, uint64_t to) {}
 	virtual void reset() {}
 
+	uint64_t fromTimeToSample(double time) const;
+	double fromSampleToTime(uint64_t sample) const;
+
 Q_SIGNALS:
 	void nameChanged(QString);
 	void pixelOffsetChanged(double);
-
-protected:
-	uint64_t fromTimeToSample(double time) const;
-	double fromSampleToTime(uint64_t sample) const;
 
 protected:
 	QString m_name;

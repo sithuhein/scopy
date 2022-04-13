@@ -82,8 +82,7 @@ LogicAnalyzer::LogicAnalyzer(struct iio_context *ctx, adiscope::Filter *filt,
 	ui(new Ui::LogicAnalyzer),
 	m_plot(this, false, 16, 10, new TimePrefixFormatter, new MetricPrefixFormatter),
 	m_bufferPreviewer(new DigitalBufferPreviewer(40, this)),
-	m_m2k_context(m2kOpen(ctx, "")),
-	m_m2kDigital(m_m2k_context->getDigital()),
+	m_plotScrollBar(new QScrollBar(Qt::Vertical, this)),
 	m_sampleRateButton(new ScaleSpinButton({
 					{"sps", 1E0},
 					{"ksps", 1E+3},
@@ -106,6 +105,9 @@ LogicAnalyzer::LogicAnalyzer(struct iio_context *ctx, adiscope::Filter *filt,
 					 true, false, this)),
 	m_sampleRate(1000000),
 	m_bufferSize(1000),
+	m_lastCapturedSample(0),
+	m_m2k_context(m2kOpen(ctx, "")),
+	m_m2kDigital(m_m2k_context->getDigital()),
 	m_nbChannels(DIGITAL_NR_CHANNELS),
 	m_horizOffset(0.0),
 	m_timeTriggerOffset(0.0),
@@ -113,12 +115,10 @@ LogicAnalyzer::LogicAnalyzer(struct iio_context *ctx, adiscope::Filter *filt,
 	m_captureThread(nullptr),
 	m_stopRequested(false),
 	m_acquisitionStarted(false),
-	m_plotScrollBar(new QScrollBar(Qt::Vertical, this)),
 	m_started(false),
 	m_selectedChannel(-1),
 	m_wheelEventGuard(nullptr),
 	m_decoderMenu(nullptr),
-	m_lastCapturedSample(0),
 	m_currentGroupMenu(nullptr),
 	m_autoMode(false),
 	m_timer(new QTimer(this)),
@@ -313,6 +313,16 @@ void LogicAnalyzer::setData(const uint16_t * const data, int size)
 
 }
 
+QVector<GenericLogicPlotCurve*> LogicAnalyzer::getPlotCurves(bool logic) const
+{
+	if (logic) {
+		return m_plotCurves;
+	} else {
+		return m_oscPlotCurves;
+	}
+
+}
+
 std::vector<QWidget *> LogicAnalyzer::enableMixedSignalView(CapturePlot *osc, int oscAnalogChannels)
 {
 	// save the state of the tool
@@ -446,7 +456,6 @@ std::vector<QWidget *> LogicAnalyzer::enableMixedSignalView(CapturePlot *osc, in
 
 	layout->insertLayout(2, decoderEnumerator);
 
-	QWidget *decoderMenu = nullptr;
 	QVBoxLayout *decoderSettingsLayout = new QVBoxLayout();
 
 	QComboBox *stackDecoderComboBox = new QComboBox();
@@ -1075,34 +1084,7 @@ void LogicAnalyzer::onSampleRateValueChanged(double value)
 	qDebug() << "Sample rate: " << value;
 	m_sampleRate = value;
 
-	if (ui->btnStreamOneShot->isChecked()) { // oneshot
-		m_plot.cancelZoom();
-//		m_timePositionButton->setValue(m_timeTriggerOffset * m_sampleRate);
-		m_plot.setHorizOffset(1.0 / m_sampleRate * m_bufferSize / 2.0 + m_timeTriggerOffset);
-		m_horizOffset = 1.0 / m_sampleRate * m_bufferSize / 2.0 + m_timeTriggerOffset;
-		m_plot.replot();
-		m_plot.zoomBaseUpdate();
-	} else { // streaming
-		m_plot.cancelZoom();
-		m_plot.setHorizOffset(1.0 / m_sampleRate * m_bufferSize / 2.0);
-		m_horizOffset = 1.0 / m_sampleRate * m_bufferSize / 2.0;
-		m_plot.replot();
-		m_plot.zoomBaseUpdate();
-	}
-
-	m_plot.setHorizUnitsPerDiv(1.0 / m_sampleRate * m_bufferSize / 16.0);
-
-	m_timerTimeout = 1.0 / m_sampleRate * m_bufferSize * 1000.0 + 100;
-
-	m_plot.cancelZoom();
-	m_plot.zoomBaseUpdate();
-	m_plot.replot();
-
-	updateBufferPreviewer(0, m_lastCapturedSample);
-
-	double maxT = (1 << 13) * (1.0 / m_sampleRate) - 1.0 / m_sampleRate * m_bufferSize / 2.0; // 8192 * time between samples
-	double minT = -((1 << 13) - 1) * (1.0 / m_sampleRate) - 1.0 / m_sampleRate * m_bufferSize / 2.0; // (2 << 13) - 1 max hdl fifo depth
-	m_plot.setTimeTriggerInterval(minT, maxT);
+	resetViewport();
 
 	if (wasRunning) {
 		startStop(true);
@@ -1117,35 +1099,7 @@ void LogicAnalyzer::onBufferSizeChanged(double value)
 	}
 
 	m_bufferSize = value;
-
-	if (ui->btnStreamOneShot->isChecked()) { // oneshot
-		m_plot.cancelZoom();
-//		m_timePositionButton->setValue(m_timeTriggerOffset);
-		m_plot.setHorizOffset(1.0 / m_sampleRate * m_bufferSize / 2.0 + m_timeTriggerOffset);
-		m_horizOffset = 1.0 / m_sampleRate * m_bufferSize / 2.0 + m_timeTriggerOffset;
-		m_plot.replot();
-		m_plot.zoomBaseUpdate();
-	} else { // streaming
-		m_plot.cancelZoom();
-		m_plot.setHorizOffset(1.0 / m_sampleRate * m_bufferSize / 2.0);
-		m_horizOffset = 1.0 / m_sampleRate * m_bufferSize / 2.0;
-		m_plot.replot();
-		m_plot.zoomBaseUpdate();
-	}
-
-	m_plot.setHorizUnitsPerDiv(1.0 / m_sampleRate * m_bufferSize / 16.0);
-	m_timerTimeout = 1.0 / m_sampleRate * m_bufferSize * 1000.0 + 100;
-
-	m_plot.cancelZoom();
-	m_plot.zoomBaseUpdate();
-	m_plot.replot();
-
-	updateBufferPreviewer(0, m_lastCapturedSample);
-
-	double maxT = (1 << 13) * (1.0 / m_sampleRate) - 1.0 / m_sampleRate * m_bufferSize / 2.0; // 8192 * time between samples
-	double minT = -((1 << 13) - 1) * (1.0 / m_sampleRate) - 1.0 / m_sampleRate * m_bufferSize / 2.0; // (2 << 13) - 1 max hdl fifo depth
-	m_plot.setTimeTriggerInterval(minT, maxT);
-
+	resetViewport();
 	if (wasRunning) {
 		startStop(true);
 	}
@@ -1317,6 +1271,9 @@ void LogicAnalyzer::setupUi()
 	int channelSettings_panel = ui->stackedWidget->indexOf(ui->channelSettings);
 	ui->btnChannelSettings->setProperty("id", QVariant(-channelSettings_panel));
 
+	const int decoderTable_panel = ui->stackedWidget->indexOf(ui->decoderTablePage);
+	ui->btnDecoderTable->setProperty("id", QVariant(-decoderTable_panel));
+
 	// default trigger menu?
 	m_menuOrder.push_back(ui->btnTrigger);
 
@@ -1405,6 +1362,10 @@ void LogicAnalyzer::setupUi()
 		// Note: color.name() is the hex variant eg #AABBCC
 		ui->traceColorComboBox->addItem(colorIcon, name, color.name());
 	}
+
+	// Decoder table
+
+	ui->decoderTableView->setLogicAnalyzer(this);
 
 	// Setup cursors menu
 
@@ -1616,6 +1577,30 @@ void LogicAnalyzer::connectSignalsAndSlots()
 	connect(ui->printBtn, &QPushButton::clicked, [=](){
 		m_plot.printWithNoBackground("Logic Analyzer");
 	});
+
+	// Decoder table
+	connect(ui->btnDecoderTable, &CustomPushButton::toggled, [=](bool checked){
+		// When the bottom decoder button is clicked show/hide the right menu
+		// and ativate or deactivate the decoder table.
+		triggerRightMenuToggle(ui->btnDecoderTable, checked);
+		if (checked) {
+			ui->decoderTableView->activate(true);
+		} else {
+			ui->decoderTableView->deactivate();
+		}
+	});
+
+	connect(ui->decoderTableView, &DecoderTable::clicked, [=](const QModelIndex& index) {
+		// When a row is clicked in the decoder table, update the plot
+		// to zoom into the sample area that was clicked.
+		// qDebug() << "Decoder item clicked " << index << Qt::endl;
+		if (index.data().canConvert<DecoderTableItem>()) {
+			DecoderTableItem item = qvariant_cast<DecoderTableItem>(index.data());
+			if (item.curve != nullptr and item.startSample != item.endSample) {
+				fitViewport(item.startTime(), item.endTime());
+			}
+		}
+	});
 }
 
 void LogicAnalyzer::triggerRightMenuToggle(CustomPushButton *btn, bool checked)
@@ -1751,6 +1736,45 @@ void LogicAnalyzer::initBufferScrolling()
 				(ui->btnStreamOneShot ? 0 : m_timeTriggerOffset / m_sampleRate);
 	});
 }
+
+void LogicAnalyzer::resetViewport()
+{
+	if (ui->btnStreamOneShot->isChecked()) { // oneshot
+		m_plot.cancelZoom();
+//		m_timePositionButton->setValue(m_timeTriggerOffset * m_sampleRate);
+		m_plot.setHorizOffset(1.0 / m_sampleRate * m_bufferSize / 2.0 + m_timeTriggerOffset);
+		m_horizOffset = 1.0 / m_sampleRate * m_bufferSize / 2.0 + m_timeTriggerOffset;
+		m_plot.replot();
+		m_plot.zoomBaseUpdate();
+	} else { // streaming
+		m_plot.cancelZoom();
+		m_plot.setHorizOffset(1.0 / m_sampleRate * m_bufferSize / 2.0);
+		m_horizOffset = 1.0 / m_sampleRate * m_bufferSize / 2.0;
+		m_plot.replot();
+		m_plot.zoomBaseUpdate();
+	}
+
+	m_plot.setHorizUnitsPerDiv(1.0 / m_sampleRate * m_bufferSize / 16.0);
+
+	m_timerTimeout = 1.0 / m_sampleRate * m_bufferSize * 1000.0 + 100;
+
+	m_plot.cancelZoom();
+	m_plot.zoomBaseUpdate();
+	m_plot.replot();
+
+	updateBufferPreviewer(0, m_lastCapturedSample);
+
+	double maxT = (1 << 13) * (1.0 / m_sampleRate) - 1.0 / m_sampleRate * m_bufferSize / 2.0; // 8192 * time between samples
+	double minT = -((1 << 13) - 1) * (1.0 / m_sampleRate) - 1.0 / m_sampleRate * m_bufferSize / 2.0; // (2 << 13) - 1 max hdl fifo depth
+	m_plot.setTimeTriggerInterval(minT, maxT);
+}
+
+void LogicAnalyzer::fitViewport(double min, double max)
+{
+	if (min >= max) return;
+	m_plot.setTimeTriggerInterval(min, max);
+	m_plot.replot();
+};
 
 void LogicAnalyzer::startStop(bool start)
 {

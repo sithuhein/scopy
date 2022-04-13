@@ -91,10 +91,18 @@ public: // Mixed Signal View Interface
 	// get the current plot in use (logic or osc)
 	QwtPlot *getCurrentPlot();
 
+	// get list of plot curves
+	QVector<GenericLogicPlotCurve*> getPlotCurves(bool logic) const;
+
 	// connect signals and slots for the plot (logic or osc)
 	void connectSignalsAndSlotsForPlot(CapturePlot *plot);
 
 	void setData(const uint16_t * const data, int size);
+
+	// Update the viewport to fit the min and max time
+	void fitViewport(double min, double max);
+	void resetViewport();
+
 Q_SIGNALS:
 	void showTool();
 
