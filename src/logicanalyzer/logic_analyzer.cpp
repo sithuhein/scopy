@@ -1774,9 +1774,12 @@ void LogicAnalyzer::fitViewport(double min, double max)
 	if (min >= max) return;
 	// Center between min and max
 	const auto dx = max - min;
-	const auto center = min + dx/2;
-	m_plot.setHorizOffset(center);
-	m_horizOffset = center;
+
+	QwtPlotZoomer *z = m_plot.getZoomer();
+	auto yMax = m_plot.axisScaleDiv(QwtAxis::YLeft).interval().maxValue();
+	QRectF r(min,0, dx, yMax);
+	z->zoom(0); // reset zoom stack to base
+	z->zoom(r); // add r to the zoom stack
 
 	// TODO: Zoom in automatically
 	m_plot.replot();
