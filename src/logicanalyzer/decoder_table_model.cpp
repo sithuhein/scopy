@@ -111,9 +111,9 @@ int DecoderTableModel::annotationIndexMapping(const AnnotationCurve* curve) cons
     for (const auto &rowmap: curve->getAnnotationRows()) {
         const Row &row = rowmap.first;
         const auto title = row.title();
-        if (title == "USB packet: Packets") {
+	if (title == "Parallel: Items") {
             return row.index();
-        }
+	}
         // TODO: What are the others???
     }
     qDebug() << "No mapping found for decoder table" << Qt::endl;
