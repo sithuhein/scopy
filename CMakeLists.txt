@@ -205,8 +205,8 @@ endif()
 find_package(PkgConfig)
 set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH ON)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
-pkg_check_modules(GLIBMM REQUIRED glibmm-2.4)
-pkg_check_modules(SIGCPP REQUIRED sigc++-2.0)
+pkg_check_modules(GLIBMM REQUIRED glibmm-2.68)
+pkg_check_modules(SIGCPP REQUIRED sigc++-3.0)
 pkg_check_modules(LIBSIGROK_DECODE REQUIRED libsigrokdecode)
 
 pkg_get_variable(LIBSIGROK_DECODERS_DIR libsigrokdecode decodersdir)
@@ -498,9 +498,9 @@ target_compile_options(${PROJECT_NAME} PUBLIC
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-		CXX_STANDARD 11
+		CXX_STANDARD 17
 		CXX_STANDARD_REQUIRED ON
-		CXX_EXTENSIONS OFF
+		CXX_EXTENSIONS ON
 		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
 )
 
