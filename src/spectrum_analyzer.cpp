@@ -39,6 +39,7 @@
 #include <QtWidgets>
 
 /* Local includes */
+#include "WaterfallDisplayPlot.h"
 #include "logging_categories.h"
 #include "spectrum_analyzer.hpp"
 #include "filter.hpp"
@@ -136,6 +137,7 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	m_generic_analogin(nullptr),
 	marker_selector(new DbClickButtons(this)),
 	fft_plot(nullptr),
+	waterfall_plot(nullptr),
 	settings_group(new QButtonGroup(this)),
 	channels_group(new QButtonGroup(this)),
 	adc_name(ctx ? filt->device_name(TOOL_SPECTRUM_ANALYZER) : ""),
@@ -250,6 +252,33 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	measure_settings_init();
 #endif
 
+	// waterfall plot
+
+	waterfall_plot = new WaterfallDisplayPlot(m_adc_nb_channels, this);
+	waterfall_plot->disableLegend();
+
+//	waterfall_plot->setAxisVisible(QwtAxis::XBottom, false);
+//	waterfall_plot->setAxisVisible(QwtAxis::YLeft, false);
+//	waterfall_plot->setUsingLeftAxisScales(false);
+
+//	waterfall_plot->setFrequencyRange(-10, 10);
+	waterfall_plot->setIntensityRange(1000, 50000);
+//	waterfall_plot->setXaxisMouseGesturesEnabled(false);
+	waterfall_plot->setNumRows(25);
+	waterfall_plot->heightForWidth(25);
+	waterfall_plot->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+	waterfall_plot->setAutoFillBackground(true);
+	waterfall_plot->setPlotPosHalf(false);
+	waterfall_plot->replot();
+
+//	for (uint i = 0; i < m_adc_nb_channels; i++) {
+////		ui->gridLayout_plot->addWidget(measurePanel, 0, 1, 1, 1);
+//		waterfall_plot->setYaxisMouseGesturesEnabled(i, false);
+//	}
+
+//	connect(waterfall_plot, SIGNAL(channelAdded(int)),
+//		    SLOT(onChannelAdded(int)));
+
 
 	// plot widget
 	QWidget* centralWidget = new QWidget(this);
@@ -266,6 +295,7 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	vLayout->addWidget(ui->topPlotWidget);
 
 	vLayout->addWidget(fft_plot->getPlotwithElements());
+	vLayout->addWidget(waterfall_plot->getPlotwithElements());
 
 	ui->widgetPlotContainer->layout()->removeWidget(ui->markerTable);
 	vLayout->addWidget(ui->markerTable);
@@ -358,6 +388,11 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 		fft_plot->setAxisScale(QwtAxis::XBottom, start, stop);
 		fft_plot->replot();
 		fft_plot->bottomHandlesArea()->repaint();
+
+		waterfall_plot->setAxisScale(QwtAxis::XBottom, start, stop);
+		waterfall_plot->bottomHandlesArea()->repaint();
+		waterfall_plot->setFrequencyRange((stop - start) / 2, stop);
+		waterfall_plot->replot();
 
 		setSampleRate(2 * stop);
 
@@ -454,7 +489,7 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	connect(fft_plot, SIGNAL(newMarkerData()),
 	        this, SLOT(onPlotNewMarkerData()));
 	connect(fft_plot, SIGNAL(markerSelected(uint, uint)),
-	        this, SLOT(onPlotMarkerSelected(uint, uint)));
+		this, SLOT(onPlotMarkerSelected(uint, uint)));
 
 	connect(marker_freq_pos, SIGNAL(valueChanged(double)),
 	        this, SLOT(onMarkerFreqPosChanged(double)));
@@ -493,6 +528,42 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 
 	connect(fft_plot, SIGNAL(currentAverageIndex(unsigned int, unsigned int)),
 		SLOT(onCurrentAverageIndexChanged(unsigned int, unsigned int)));
+
+//	connect(fft_plot, &FftDisplayPlot::customEvent, [=](const QEvent* updateEvent){
+//		qDebug() << "found event";
+//		if (updateEvent->type() == WaterfallUpdateEvent::Type()) {
+//			qDebug() << "good event";
+//			WaterfallUpdateEvent* event = (WaterfallUpdateEvent*)updateEvent;
+//			const std::vector<double*> dataPoints = event->getPoints();
+//			const uint64_t numDataPoints = event->getNumDataPoints();
+//			const gr::high_res_timer_type dataTimestamp = event->getDataTimestamp();
+
+//			// TEMP STUFF:
+//			int d_min_val = -1000;
+//			int d_max_val = 1000;
+//			int d_time_per_fft = 0;
+
+//			for (size_t i = 0; i < dataPoints.size(); i++) {
+//				qDebug() << dataPoints[i];
+//				double* min_val =
+//						std::min_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
+//				double* max_val =
+//						std::max_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
+//				if (*min_val < d_min_val)
+//					d_min_val = *min_val;
+//				if (*max_val > d_max_val)
+//					d_max_val = *max_val;
+//			}
+
+//			waterfall_plot->plotNewData(dataPoints, numDataPoints, d_time_per_fft, dataTimestamp, 0);
+//		}
+//	});
+
+	connect(waterfall_plot, SIGNAL(newData()),
+		SLOT(singleCaptureDone()));
+
+	connect(waterfall_plot, SIGNAL(currentAverageIndex(unsigned int, unsigned int)),
+		SLOT(onCurrentAverageIndexChanged(unsigned int, unsigned int)));
 	const bool visible = (channels[crt_channel_id]->averageType() != FftDisplayPlot::AverageType::SAMPLE);
 	setCurrentAverageIndexLabel(crt_channel_id);
 
@@ -519,6 +590,10 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	cursor_panel_init();
 
 	connect(fft_plot,
+		SIGNAL(cursorReadoutsChanged(struct cursorReadoutsText)),
+		SLOT(onCursorReadoutsChanged(struct cursorReadoutsText)));
+
+	connect(waterfall_plot,
 		SIGNAL(cursorReadoutsChanged(struct cursorReadoutsText)),
 		SLOT(onCursorReadoutsChanged(struct cursorReadoutsText)));
 
@@ -765,12 +840,14 @@ void SpectrumAnalyzer::setNativeDialogs(bool nativeDialogs)
 {
 	Tool::setNativeDialogs(nativeDialogs);
 	fft_plot->setUseNativeDialog(nativeDialogs);
+//	waterfall_plot->setUseNativeDialog(nativeDialogs);
 }
 
 void SpectrumAnalyzer::readPreferences() {
 	bool showFps = prefPanel->getShow_plot_fps();
 	fft_plot->setVisibleFpsLabel(showFps);
 	fft_plot->setVisiblePeakSearch(prefPanel->getSpectrum_visible_peak_search());
+	waterfall_plot->setVisibleFpsLabel(showFps);
 	ui->instrumentNotes->setVisible(prefPanel->getInstrumentNotesActive());
 }
 
@@ -1818,6 +1895,7 @@ void SpectrumAnalyzer::runStopToggled(bool checked)
 		fft_plot->resetAverageHistory();
 	}
 	fft_plot->startStop(checked);
+	waterfall_plot->startStop(checked);
 	m_running = checked;
 }
 
@@ -1825,7 +1903,8 @@ void SpectrumAnalyzer::build_gnuradio_block_chain()
 {
 	fft_sink = adiscope::scope_sink_f::make(fft_size, m_max_sample_rate,
 						"Osc Frequency", m_adc_nb_channels,
-	                                        (QObject *)fft_plot);
+						(QObject *)fft_plot,
+						(QObject *)waterfall_plot);
 	fft_sink->set_trigger_mode(TRIG_MODE_TAG, 0, "buffer_start");
 
 	double targetFps = getScopyPreferences()->getTarget_fps();
@@ -1871,7 +1950,8 @@ void SpectrumAnalyzer::build_gnuradio_block_chain_no_ctx()
 {
 	fft_sink = adiscope::scope_sink_f::make(fft_size, m_max_sample_rate,
 						"Osc Frequency", m_adc_nb_channels,
-	                                        (QObject *)fft_plot);
+						(QObject *)fft_plot,
+						(QObject *)waterfall_plot);
 
 	double targetFps = getScopyPreferences()->getTarget_fps();
 	fft_sink->set_update_time(1.0/targetFps);
@@ -2016,7 +2096,9 @@ void SpectrumAnalyzer::on_comboBox_line_thickness_currentIndexChanged(int index)
 	if (width != channels[crt_channel]->lineWidth()) {
 		channels[crt_channel]->setLinewidth(width);
 		fft_plot->setLineWidth(crt_channel, width);
+		waterfall_plot->setLineWidth(crt_channel, width);
 		fft_plot->replot();
+		waterfall_plot->replot();
 	}
 }
 

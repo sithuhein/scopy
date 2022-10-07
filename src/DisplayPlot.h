@@ -612,6 +612,7 @@ protected:
 
   QwtPlotPanner* d_panner;
   QVector<QwtPlotZoomer*> d_zoomer;
+  QwtPlotZoomer* d_zoomer_waterfall;
   QwtPlotGrid *d_grid;
 
   QwtDblClickPlotPicker *d_picker;
