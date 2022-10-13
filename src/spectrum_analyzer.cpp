@@ -262,13 +262,17 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 //	waterfall_plot->setUsingLeftAxisScales(false);
 
 //	waterfall_plot->setFrequencyRange(-10, 10);
-	waterfall_plot->setIntensityRange(1000, 50000);
+//	waterfall_plot->setIntensityRange(-112000, -10000);
 //	waterfall_plot->setXaxisMouseGesturesEnabled(false);
-	waterfall_plot->setNumRows(25);
-	waterfall_plot->heightForWidth(25);
-	waterfall_plot->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-	waterfall_plot->setAutoFillBackground(true);
-	waterfall_plot->setPlotPosHalf(false);
+//	waterfall_plot->heightForWidth(25);
+//	waterfall_plot->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+//	waterfall_plot->setAutoFillBackground(false);
+	waterfall_plot->setPlotPosHalf(true);
+	waterfall_plot->setAxisVisible(QwtAxis::XBottom, false);
+	waterfall_plot->setAxisVisible(QwtAxis::XTop, false);
+	waterfall_plot->setAxisVisible(QwtAxis::YLeft, false);
+	waterfall_plot->setAxisVisible(QwtAxis::YRight, false);
+	waterfall_plot->setVisibleSampleCount(100);
 	waterfall_plot->replot();
 
 //	for (uint i = 0; i < m_adc_nb_channels; i++) {
@@ -283,6 +287,8 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	// plot widget
 	QWidget* centralWidget = new QWidget(this);
 	QVBoxLayout* vLayout = new QVBoxLayout(centralWidget);
+	QVBoxLayout* vPlotsLayout = new QVBoxLayout(centralWidget);
+	QHBoxLayout* waterfallLayout = new QHBoxLayout(centralWidget);
 	vLayout->setContentsMargins(20, 0, 20, 20);
 	vLayout->setSpacing(10);
 	centralWidget->setLayout(vLayout);
@@ -294,8 +300,13 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	ui->widgetPlotContainer->layout()->removeWidget(ui->topPlotWidget);
 	vLayout->addWidget(ui->topPlotWidget);
 
-	vLayout->addWidget(fft_plot->getPlotwithElements());
-	vLayout->addWidget(waterfall_plot->getPlotwithElements());
+	vPlotsLayout->addLayout(waterfallLayout);
+	vPlotsLayout->setSpacing(0);
+	vPlotsLayout->setContentsMargins(0, 0, 0, 0);
+	waterfallLayout->addSpacerItem(new QSpacerItem(60, 0, QSizePolicy::Fixed, QSizePolicy::Fixed));
+	waterfallLayout->addWidget(waterfall_plot->getPlotwithElements());
+	vPlotsLayout->addWidget(fft_plot->getPlotwithElements());
+	vLayout->addLayout(vPlotsLayout);
 
 	ui->widgetPlotContainer->layout()->removeWidget(ui->markerTable);
 	vLayout->addWidget(ui->markerTable);
@@ -303,6 +314,8 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	fft_plot->setZoomerEnabled();
 	fft_plot->setAxisVisible(QwtAxis::XBottom, false);
 	fft_plot->setAxisVisible(QwtAxis::YLeft, false);
+	fft_plot->setAxisVisible(QwtAxis::YRight, false);
+	fft_plot->setAxisVisible(QwtAxis::XTop, false);
 	fft_plot->setUsingLeftAxisScales(false);
 
 	ui->gridLayout_plot->addWidget(centralWidget, 1, 0, 1, 1);
@@ -330,6 +343,7 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 		connect(channel.get()->widget(), SIGNAL(enabled(bool)),
 		        SLOT(onChannelEnabled(bool)));
 
+		waterfall_plot->enableChannel(channel.get()->widget()->enableButton()->isChecked(), channel->id());
 		ch_api.append(new SpectrumChannel_API(this,channel));
 	}
 
@@ -391,8 +405,10 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 
 		waterfall_plot->setAxisScale(QwtAxis::XBottom, start, stop);
 		waterfall_plot->bottomHandlesArea()->repaint();
-		waterfall_plot->setFrequencyRange((stop - start) / 2, stop);
+		waterfall_plot->setFrequencyRange(start, stop);
+//		waterfall_plot->setCenterFrequency(startStopRange->getCenterValue());
 		waterfall_plot->replot();
+
 
 		setSampleRate(2 * stop);
 
@@ -528,36 +544,6 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 
 	connect(fft_plot, SIGNAL(currentAverageIndex(unsigned int, unsigned int)),
 		SLOT(onCurrentAverageIndexChanged(unsigned int, unsigned int)));
-
-//	connect(fft_plot, &FftDisplayPlot::customEvent, [=](const QEvent* updateEvent){
-//		qDebug() << "found event";
-//		if (updateEvent->type() == WaterfallUpdateEvent::Type()) {
-//			qDebug() << "good event";
-//			WaterfallUpdateEvent* event = (WaterfallUpdateEvent*)updateEvent;
-//			const std::vector<double*> dataPoints = event->getPoints();
-//			const uint64_t numDataPoints = event->getNumDataPoints();
-//			const gr::high_res_timer_type dataTimestamp = event->getDataTimestamp();
-
-//			// TEMP STUFF:
-//			int d_min_val = -1000;
-//			int d_max_val = 1000;
-//			int d_time_per_fft = 0;
-
-//			for (size_t i = 0; i < dataPoints.size(); i++) {
-//				qDebug() << dataPoints[i];
-//				double* min_val =
-//						std::min_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
-//				double* max_val =
-//						std::max_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
-//				if (*min_val < d_min_val)
-//					d_min_val = *min_val;
-//				if (*max_val > d_max_val)
-//					d_max_val = *max_val;
-//			}
-
-//			waterfall_plot->plotNewData(dataPoints, numDataPoints, d_time_per_fft, dataTimestamp, 0);
-//		}
-//	});
 
 	connect(waterfall_plot, SIGNAL(newData()),
 		SLOT(singleCaptureDone()));
@@ -2328,6 +2314,7 @@ void SpectrumAnalyzer::onChannelEnabled(bool en)
 {
 	ChannelWidget *cw = static_cast<ChannelWidget *>(QObject::sender());
 
+	waterfall_plot->enableChannel(en, cw->id());
 	if (en) {
 		fft_plot->AttachCurve(cw->id());
 		if (!ui->btnMarkers->isEnabled()) {
