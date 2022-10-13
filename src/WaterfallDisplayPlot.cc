@@ -125,6 +125,7 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 	d_legend_enabled = true;
 	d_nrows = 200;
 	d_color_bar_title_font_size = 18;
+	d_time_per_fft = 0;
 
 //	setAxisTitle(QwtAxis::XBottom, "Frequency (Hz)");
 	setAxisScaleDraw(QwtAxis::XBottom, new FreqDisplayScaleDraw(0));
@@ -182,9 +183,19 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 	_updateIntensityRangeDisplay();
 
 	d_xaxis_multiplier = 1;
+
+	setVisibleSampleCount(100);
 }
 
 WaterfallDisplayPlot::~WaterfallDisplayPlot() {}
+
+void WaterfallDisplayPlot::setVisibleSampleCount(int count)
+{
+	d_visible_samples = count;
+
+	setYaxis(0, d_visible_samples);
+	setNumRows(d_visible_samples);
+}
 
 void WaterfallDisplayPlot::resetAxis()
 {
@@ -201,6 +212,19 @@ void WaterfallDisplayPlot::resetAxis()
 	d_zoomer_waterfall->setZoomBase(zbase);
 	d_zoomer_waterfall->setZoomBase(true);
 	d_zoomer_waterfall->zoom(0);
+}
+
+void WaterfallDisplayPlot::autoScale()
+{
+    double min_int = d_min_val;
+    double max_int = d_max_val/1000000;
+
+    setIntensityRange(min_int, max_int);
+}
+
+void WaterfallDisplayPlot::setCenterFrequency(const double freq)
+{
+	d_center_frequency = freq;
 }
 
 void WaterfallDisplayPlot::setFrequencyRange(const double centerfreq,
@@ -254,43 +278,26 @@ void WaterfallDisplayPlot::plotNewData(const std::vector<double*> dataPoints,
 				       const gr::high_res_timer_type timestamp,
 				       const int droppedFrames)
 {
-//	int64_t _npoints_in = d_half_freq ? numDataPoints / 2 : numDataPoints;
-	int64_t _npoints_in = numDataPoints / 2;
+	// Display first half of the plot if d_half_freq is true
+	int64_t _npoints_in = d_half_freq ? numDataPoints / 2 : numDataPoints;
 	int64_t _in_index = 0;
-//	int64_t _in_index = d_half_freq ? _npoints_in : 0;
+		_in_index = (getStartFrequency() / getStopFrequency()) * _npoints_in;
+//		_in_index = getStartFrequency() * numDataPoints / getStopFrequency();
+		_npoints_in -= _in_index;
+//		_npoints_in = d_center_frequency * numDataPoints / getStopFrequency();
+		qDebug() << "CENTERFREQ:" << _npoints_in << _in_index << d_center_frequency;
 
 	if (!d_stop) {
 		if (_npoints_in > 0 && timestamp == 0) {
 			d_numPoints = _npoints_in / d_nrows;
 			resetAxis();
 
-			// If not displaying just the positive half of the spectrum,
-			// plot the full thing now.
-			if (!d_half_freq) {
 				for (unsigned int i = 0; i < d_nplots; ++i) {
 					d_data[i]->setSpectrumDataBuffer(dataPoints[i]);
 					d_data[i]->setNumLinesToUpdate(0);
 					d_spectrogram[i]->invalidateCache();
 					d_spectrogram[i]->itemChanged();
 				}
-			}
-
-			// Otherwise, loop through our input data vector and only plot
-			// the second half of each row.
-			else {
-				for (unsigned int i = 0; i < d_nplots; ++i) {
-					d_data[i]->setSpectrumDataBuffer(&(dataPoints[i][d_numPoints]));
-					for (int n = 1; n < d_nrows; n++) {
-						d_data[i]->addFFTData(
-									&(dataPoints[i][d_numPoints + 2 * n * d_numPoints]),
-								d_numPoints,
-								0);
-						d_data[i]->incrementNumLinesToUpdate();
-					}
-					d_spectrogram[i]->invalidateCache();
-					d_spectrogram[i]->itemChanged();
-				}
-			}
 
 			QwtTimeScaleDraw* timeScale =
 					(QwtTimeScaleDraw*)axisScaleDraw(QwtAxis::YLeft);
@@ -326,9 +333,15 @@ void WaterfallDisplayPlot::plotNewData(const std::vector<double*> dataPoints,
 			((WaterfallZoomer*)d_zoomer_waterfall)->setSecondsPerLine(timePerFFT);
 			((WaterfallZoomer*)d_zoomer_waterfall)->setZeroTime(timestamp);
 
-			for (unsigned int i = 0; i < d_nplots; ++i) {
-				d_data[i]->addFFTData(
-							&(dataPoints[i][_in_index]), _npoints_in, droppedFrames);
+
+			for (auto ch: channel_status.toStdMap()) {
+				int i = ch.first;
+				if (!ch.second) {
+					d_data[i]->reset();
+					continue;
+				}
+
+				d_data[i]->addFFTData(&(dataPoints[i][_in_index]), _npoints_in, droppedFrames);
 				d_data[i]->incrementNumLinesToUpdate();
 				d_spectrogram[i]->invalidateCache();
 				d_spectrogram[i]->itemChanged();
@@ -573,6 +586,15 @@ void WaterfallDisplayPlot::setAlpha(unsigned int which, int alpha)
 
 int WaterfallDisplayPlot::getNumRows() const { return d_nrows; }
 
+void WaterfallDisplayPlot::enableChannel(bool en, int id)
+{
+	if (channel_status.contains(id)) {
+		channel_status[id] = en;
+	} else {
+		channel_status.insert(id, en);
+	}
+}
+
 void WaterfallDisplayPlot::_updateIntensityRangeDisplay()
 {
 	QwtScaleWidget* rightAxis = axisWidget(QwtAxis::YRight);
@@ -664,22 +686,18 @@ void WaterfallDisplayPlot::customEvent(QEvent *e)
 		const uint64_t numDataPoints = event->getNumDataPoints();
 		const gr::high_res_timer_type dataTimestamp = event->getDataTimestamp();
 
-		// TEMP STUFF:
-//		int d_min_val = -1000;
-//		int d_max_val = 1000;
-		int d_time_per_fft = 1;
-
-		for (size_t i = 0; i < dataPoints.size(); i++) {
-//			qDebug() << dataPoints[i];
-			double* min_val =
-					std::min_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
-			double* max_val =
-					std::max_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
-//			if (*min_val < d_min_val)
-//				d_min_val = *min_val;
-//			if (*max_val > d_max_val)
-//				d_max_val = *max_val;
+		for (auto ch: channel_status.toStdMap()) {
+			int i = ch.first;
+				const double* min_val =
+						std::min_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
+				const double* max_val =
+						std::max_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
+					if (*min_val < d_min_val || i == 0)
+						d_min_val = *min_val;
+					if (*max_val > d_max_val || i == 0)
+						d_max_val = *max_val;
 		}
+		autoScale();
 
 		plotNewData(dataPoints, numDataPoints, d_time_per_fft, dataTimestamp, 0);
 	}

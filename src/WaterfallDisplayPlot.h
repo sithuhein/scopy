@@ -13,6 +13,7 @@
 
 #include <gnuradio/high_res_timer.h>
 #include "DisplayPlot.h"
+//#include "spectrum_analyzer.hpp"
 #include "waterfallGlobalData.h"
 #include <qwt_plot_spectrogram.h>
 #include <cstdint>
@@ -28,6 +29,7 @@
 typedef QPointF QwtDoublePoint;
 typedef QRectF QwtDoubleRect;
 typedef QwtInterval QwtDoubleInterval;
+
 #endif
 
 /*!
@@ -93,7 +95,12 @@ public:
 	void setAlpha(unsigned int which, int alpha);
 
 	int getNumRows() const;
+	void enableChannel(bool en, int id);
 
+	void setVisibleSampleCount(int count);
+	void autoScale();
+
+	void setCenterFrequency(const double freq);
 public Q_SLOTS:
 	void
 	setIntensityColorMapType(const unsigned int, const int, const QColor, const QColor);
@@ -122,6 +129,12 @@ private:
 	bool d_half_freq;
 	bool d_legend_enabled;
 	int d_nrows;
+	QMap<int, bool> channel_status;
+	int d_visible_samples;
+
+	double d_min_val;
+	double d_max_val;
+	int d_time_per_fft;
 
 	std::vector<WaterfallData*> d_data;
 
