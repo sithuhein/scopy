@@ -20,6 +20,11 @@
 typedef QwtInterval QwtDoubleInterval;
 #endif
 
+enum WaterfallFlowDirection {
+    UP,
+    DOWN
+};
+
 class WaterfallData : public QwtRasterData
 {
 public:
@@ -54,11 +59,14 @@ public:
     virtual void setNumLinesToUpdate(const int);
     virtual void incrementNumLinesToUpdate();
 
+    void setFlowDirection(WaterfallFlowDirection direction);
+    WaterfallFlowDirection getFlowDirection();
 protected:
     std::vector<double> _spectrumData;
     uint64_t _fftPoints;
     uint64_t _historyLength;
     int _numLinesToUpdate;
+    WaterfallFlowDirection flow_direction;
 
 #if QWT_VERSION < 0x060000
     QwtDoubleInterval _intensityRange;

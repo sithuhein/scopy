@@ -39,13 +39,16 @@ using namespace adiscope;
 class ColorMap_DefaultDark : public QwtLinearColorMap
 {
 public:
-    ColorMap_DefaultDark() : QwtLinearColorMap(Qt::black, QColor(255, 144, 0))
-    {
-	addColorStop(0.2, Qt::black);
-	addColorStop(0.4, Qt::darkCyan);
-	addColorStop(0.6, Qt::cyan);
-	addColorStop(0.8, QColor(255, 144, 0));
-    }
+	ColorMap_DefaultDark() : QwtLinearColorMap(Qt::black, Qt::white)
+	{
+		addColorStop(0.16, Qt::black);
+//		addColorStop(0.33, Qt::darkCyan);
+		addColorStop(0.33, QColor(29, 32, 48));
+//		addColorStop(0.5, Qt::cyan);
+		addColorStop(0.5, QColor(74, 100, 255));
+		addColorStop(0.66, QColor(255, 144, 0));
+		addColorStop(0.83, Qt::white);
+	}
 };
 
 /***********************************************************************
@@ -139,10 +142,10 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 	d_color_bar_title_font_size = 18;
 	d_time_per_fft = 0;
 
-//	setAxisTitle(QwtAxis::XBottom, "Frequency (Hz)");
+	//	setAxisTitle(QwtAxis::XBottom, "Frequency (Hz)");
 	setAxisScaleDraw(QwtAxis::XBottom, new FreqDisplayScaleDraw(0));
 
-//	setAxisTitle(QwtAxis::YLeft, "Time (s)");
+	//	setAxisTitle(QwtAxis::YLeft, "Time (s)");
 	setAxisScaleDraw(QwtAxis::YLeft, new QwtTimeScaleDraw());
 
 	for (unsigned int i = 0; i < d_nplots; ++i) {
@@ -150,13 +153,14 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 					new WaterfallData(d_start_frequency, d_stop_frequency, d_numPoints, d_nrows));
 
 #if QWT_VERSION < 0x060000
-		d_spectrogram.push_back(new PlotWaterfall(d_data[i], "Spectrogram"));
+		d_spectrogram.push_back(new PlotWaterfall(d_data[i]	waterfall_plot->setIntensityRange(bottom_value, top_value);
+, "Spectrogram"));
 
 #else
 		d_spectrogram.push_back(new QwtPlotSpectrogram("Spectrogram"));
 		d_spectrogram[i]->setData(d_data[i]);
 		d_spectrogram[i]->setDisplayMode(QwtPlotSpectrogram::ImageMode, true);
-//		d_spectrogram[i]->setColorMap(new ColorMap_MultiColor());
+		//		d_spectrogram[i]->setColorMap(new ColorMap_MultiColor());
 		d_spectrogram[i]->setColorMap(new ColorMap_DefaultDark());
 #endif
 
@@ -171,7 +175,8 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 		setIntensityColorMapType(
 					i, d_intensity_color_map_type[i], QColor("white"), QColor("white"));
 
-		setAlpha(i, 255 / d_nplots);
+		//		setAlpha(i, 255 / d_nplots);
+		setAlpha(i, 0);
 	}
 
 	// Set bottom plot with no transparency as a base
@@ -208,7 +213,14 @@ void WaterfallDisplayPlot::setVisibleSampleCount(int count)
 {
 	d_visible_samples = count;
 
-	setYaxis(0, d_visible_samples);
+	switch (d_data[0]->getFlowDirection()) {
+	case WaterfallFlowDirection::UP:
+		setYaxis(0, d_visible_samples);
+		break;
+	case WaterfallFlowDirection::DOWN:
+		setYaxis(-d_visible_samples, 0);
+		break;
+	}
 	setNumRows(d_visible_samples);
 }
 
@@ -231,12 +243,9 @@ void WaterfallDisplayPlot::resetAxis()
 
 void WaterfallDisplayPlot::autoScale()
 {
-    double min_int = d_min_val;
-    double max_int = d_max_val/1000000;
+	qDebug() << d_min_val << d_max_val;
 
-    qDebug() << d_min_val << d_max_val;
-
-    setIntensityRange(min_int, max_int);
+	setIntensityRange(d_min_val, d_max_val);
 }
 
 void WaterfallDisplayPlot::setCenterFrequency(const double freq)
@@ -284,6 +293,32 @@ void WaterfallDisplayPlot::setFrequencyRange(const double centerfreq,
 	}
 }
 
+void WaterfallDisplayPlot::setFlowDirection(WaterfallFlowDirection direction)
+{
+	for (unsigned int i = 0; i < d_nplots; ++i) {
+		d_data[i]->setFlowDirection(direction);
+
+		switch (direction) {
+		case WaterfallFlowDirection::UP:
+			d_data[i]->setInterval(Qt::YAxis, QwtInterval(0, getNumRows()));
+			break;
+		case WaterfallFlowDirection::DOWN:
+			d_data[i]->setInterval(Qt::YAxis, QwtInterval(-getNumRows(), 0));
+			break;
+		}
+	}
+
+	switch (direction) {
+	case WaterfallFlowDirection::UP:
+		setYaxis(0, d_visible_samples);
+		replot();
+		break;
+	case WaterfallFlowDirection::DOWN:
+		setYaxis(-d_visible_samples, 0);
+		replot();
+		break;
+	}
+}
 
 double WaterfallDisplayPlot::getStartFrequency() const { return d_start_frequency; }
 
@@ -292,29 +327,30 @@ double WaterfallDisplayPlot::getStopFrequency() const { return d_stop_frequency;
 void WaterfallDisplayPlot::plotNewData(const std::vector<double*> dataPoints,
 				       const int64_t numDataPoints,
 				       const double timePerFFT,
-				       const gr::high_res_timer_type timestamp,
+				       gr::high_res_timer_type timestamp,
 				       const int droppedFrames)
 {
 	// Display first half of the plot if d_half_freq is true
 	int64_t _npoints_in = d_half_freq ? numDataPoints / 2 : numDataPoints;
-	int64_t _in_index = 0;
-		_in_index = (getStartFrequency() / getStopFrequency()) * _npoints_in;
-//		_in_index = getStartFrequency() * numDataPoints / getStopFrequency();
-		_npoints_in -= _in_index;
-//		_npoints_in = d_center_frequency * numDataPoints / getStopFrequency();
-		qDebug() << "CENTERFREQ:" << _npoints_in << _in_index << d_center_frequency;
+	int64_t _in_index = d_half_freq ? (getStartFrequency() / getStopFrequency()) * _npoints_in / 2 : 0;
+	//		_in_index = (getStartFrequency() / getStopFrequency()) * _npoints_in;
+	//		_in_index = getStartFrequency() * numDataPoints / getStopFrequency();
+	_npoints_in -= _in_index;
+	//		_npoints_in = d_center_frequency * numDataPoints / getStopFrequency();
+
+	//	qDebug() << "CENTERFREQ:" << _npoints_in << _in_index << d_center_frequency;
 
 	if (!d_stop) {
 		if (_npoints_in > 0 && timestamp == 0) {
 			d_numPoints = _npoints_in / d_nrows;
 			resetAxis();
 
-				for (unsigned int i = 0; i < d_nplots; ++i) {
-					d_data[i]->setSpectrumDataBuffer(dataPoints[i]);
-					d_data[i]->setNumLinesToUpdate(0);
-					d_spectrogram[i]->invalidateCache();
-					d_spectrogram[i]->itemChanged();
-				}
+			for (unsigned int i = 0; i < d_nplots; ++i) {
+				d_data[i]->setSpectrumDataBuffer(dataPoints[i]);
+				d_data[i]->setNumLinesToUpdate(0);
+				d_spectrogram[i]->invalidateCache();
+				d_spectrogram[i]->itemChanged();
+			}
 
 			QwtTimeScaleDraw* timeScale =
 					(QwtTimeScaleDraw*)axisScaleDraw(QwtAxis::YLeft);
@@ -346,6 +382,7 @@ void WaterfallDisplayPlot::plotNewData(const std::vector<double*> dataPoints,
 					(QwtTimeScaleDraw*)axisScaleDraw(QwtAxis::YLeft);
 			timeScale->setSecondsPerLine(timePerFFT);
 			timeScale->setZeroTime(timestamp);
+			timeScale->initiateUpdate();
 
 			((WaterfallZoomer*)d_zoomer[0])->setSecondsPerLine(timePerFFT);
 			((WaterfallZoomer*)d_zoomer[0])->setZeroTime(timestamp);
@@ -695,6 +732,14 @@ void WaterfallDisplayPlot::enableLegend(bool en)
 
 void WaterfallDisplayPlot::setNumRows(int nrows) { d_nrows = nrows; }
 
+void WaterfallDisplayPlot::setUpdateTime(double t)
+{
+	//    d_update_time = t;
+	// Assume times are equal unless explicitly told by setTimePerFFT()
+	// This is the case when plotting using gr_spectrogram_plot
+	d_time_per_fft = t;
+}
+
 void WaterfallDisplayPlot::customEvent(QEvent *e)
 {
 	if (e->type() == WaterfallUpdateEvent::Type()) {
@@ -705,16 +750,17 @@ void WaterfallDisplayPlot::customEvent(QEvent *e)
 
 		for (auto ch: channel_status.toStdMap()) {
 			int i = ch.first;
-				const double* min_val =
-						std::min_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
-				const double* max_val =
-						std::max_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
-					if (*min_val < d_min_val || i == 0)
-						d_min_val = *min_val;
-					if (*max_val > d_max_val || i == 0)
-						d_max_val = *max_val;
+			const double* min_val =
+					std::min_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
+			const double* max_val =
+					std::max_element(&dataPoints[i][0], &dataPoints[i][numDataPoints - 1]);
+			if (*min_val < d_min_val || i == 0)
+				d_min_val = *min_val;
+			if (*max_val > d_max_val || i == 0) // || i == 0
+				d_max_val = *max_val;
 		}
-		autoScale();
+//		autoScale();
+		qDebug() << d_min_val << d_max_val;
 
 		plotNewData(dataPoints, numDataPoints, d_time_per_fft, dataTimestamp, 0);
 	}

@@ -68,14 +68,14 @@ public:
 	void plotNewData(const std::vector<double*> dataPoints,
 			 const int64_t numDataPoints,
 			 const double timePerFFT,
-			 const gr::high_res_timer_type timestamp,
+			 gr::high_res_timer_type timestamp,
 			 const int droppedFrames);
 
 	// to be removed
 	void plotNewData(const double* dataPoints,
 			 const int64_t numDataPoints,
 			 const double timePerFFT,
-			 const gr::high_res_timer_type timestamp,
+			 gr::high_res_timer_type timestamp,
 			 const int droppedFrames);
 
 	void setIntensityRange(const double minIntensity, const double maxIntensity);
@@ -101,6 +101,8 @@ public:
 	void autoScale();
 
 	void setCenterFrequency(const double freq);
+	void setUpdateTime(double t);
+	void setFlowDirection(WaterfallFlowDirection direction);
 public Q_SLOTS:
 	void
 	setIntensityColorMapType(const unsigned int, const int, const QColor, const QColor);
@@ -134,7 +136,7 @@ private:
 
 	double d_min_val;
 	double d_max_val;
-	int d_time_per_fft;
+	double d_time_per_fft;
 
 	std::vector<WaterfallData*> d_data;
 
