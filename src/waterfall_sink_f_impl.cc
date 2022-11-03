@@ -8,6 +8,7 @@
  *
  */
 
+#include "qdebug.h"
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -145,6 +146,7 @@ void waterfall_sink_f_impl::set_fft_size(const int fftsize)
 {
 	//	    d_main_gui->setFFTSize(fftsize);
 	d_fftsize = fftsize;
+	fftresize();
 }
 
 int waterfall_sink_f_impl::fft_size() const { return d_fftsize; }
@@ -249,7 +251,7 @@ void waterfall_sink_f_impl::fft(float* data_out, const float* data_in, int size)
 
 void waterfall_sink_f_impl::windowreset()
 {
-//	gr::thread::scoped_lock lock(d_setlock);
+	//	gr::thread::scoped_lock lock(d_setlock);
 
 	//    gr::fft::window::win_type newwintype;
 	//    newwintype = d_main_gui->getFFTWindowType();
@@ -291,10 +293,10 @@ void waterfall_sink_f_impl::fftresize()
 
 	int newfftsize = d_fftsize;
 
-	//    int newfftsize = d_main_gui->getFFTSize();
+	//	int newfftsize = d_main_gui->getFFTSize();
 	//    d_fftavg = d_main_gui->getFFTAverage();
 
-	//    if (newfftsize != d_fftsize) {
+	//	    if (newfftsize != d_fftsize) {
 	resize_bufs(newfftsize);
 
 	// Set new fft size and reset buffer index
@@ -314,7 +316,7 @@ void waterfall_sink_f_impl::fftresize()
 	d_fbuf.resize(d_fftsize);
 
 	d_last_time = 0;
-	//    }
+	//	    }
 }
 
 //void waterfall_sink_f_impl::check_clicked()
@@ -355,15 +357,8 @@ int waterfall_sink_f_impl::work(int noutput_items,
 				gr_vector_const_void_star& input_items,
 				gr_vector_void_star& output_items)
 {
-	set_fft_size(noutput_items);
-
 	int j = 0;
 	const float* in = (const float*)input_items[0];
-
-	// Update the FFT size from the application
-	fftresize();
-
-	set_fft_size(noutput_items);
 
 	//	windowreset();
 	//	check_clicked();
@@ -387,7 +382,7 @@ int waterfall_sink_f_impl::work(int noutput_items,
 						d_magbufs[n][x] = (double)((1.0 - d_fftavg) * d_magbufs[n][x] +
 									   (d_fftavg)*d_fbuf[x]);
 					}
-//							     volk_32f_convert_64f(d_magbufs[n], d_fbuf, d_fftsize);
+					//							     volk_32f_convert_64f(d_magbufs[n], d_fbuf, d_fftsize);
 				}
 
 				d_last_time = gr::high_res_timer_now();
@@ -395,10 +390,10 @@ int waterfall_sink_f_impl::work(int noutput_items,
 							d_main_gui,
 							new WaterfallUpdateEvent(d_magbufs, d_fftsize, d_last_time));
 
-//				std::cout << '\n';
-//				std::cout << *std::max_element(d_magbufs[0].begin(), d_magbufs[0].end()) << '\n';
-//				std::cout << *std::min_element(d_magbufs[0].begin(), d_magbufs[0].end()) << '\n';
-//				std::cout << '\n';
+				//				std::cout << '\n';
+				//				std::cout << *std::max_element(d_magbufs[0].begin(), d_magbufs[0].end()) << '\n';
+				//				std::cout << *std::min_element(d_magbufs[0].begin(), d_magbufs[0].end()) << '\n';
+				//				std::cout << '\n';
 			}
 
 			d_index = 0;
@@ -457,7 +452,7 @@ void waterfall_sink_f_impl::handle_pdus(pmt::pmt_t msg)
 		d_last_time = gr::high_res_timer_now();
 
 		// Update the FFT size from the application
-		fftresize();
+		//		fftresize();
 		//		windowreset();
 		//		check_clicked();
 
@@ -466,7 +461,7 @@ void waterfall_sink_f_impl::handle_pdus(pmt::pmt_t msg)
 
 		int stride = std::max(0, (int)(len - d_fftsize) / (int)(d_nrows));
 
-				set_time_per_fft(1.0 / d_bandwidth * stride);
+		set_time_per_fft(1.0 / d_bandwidth * stride);
 		std::ostringstream title("");
 		title << "Time (+" << (uint64_t)ref_start << "us)";
 		//		set_time_title(title.str());

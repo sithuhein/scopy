@@ -12,7 +12,8 @@
 #define WATERFALL_GLOBAL_DATA_CPP
 
 #include "waterfallGlobalData.h"
-
+#include "qdebug.h"
+#include <float.h>
 #include <cstdio>
 
 WaterfallData::WaterfallData(const double minimumFrequency,
@@ -46,7 +47,7 @@ WaterfallData::~WaterfallData() {}
 
 void WaterfallData::reset()
 {
-	std::fill(std::begin(_spectrumData), std::end(_spectrumData), 0.0);
+	std::fill(std::begin(_spectrumData), std::end(_spectrumData), -DBL_MAX);
 
 	_numLinesToUpdate = -1;
 }
@@ -209,11 +210,19 @@ void WaterfallData::addFFTData(const double* fftData,
 
 		// Copy the old data over if any available
 		if (heightOffset > 0) {
-			int index = flow_direction == WaterfallFlowDirection::UP ? drawingDroppedFrames + 1 : drawingDroppedFrames - 1;
-//			int index = drawingDroppedFrames + 1;
-			memmove(_spectrumData.data(),
-				&_spectrumData[index * _fftPoints],
-					heightOffset * _fftPoints * sizeof(double));
+			switch (flow_direction) {
+			case WaterfallFlowDirection::UP:
+				memmove(_spectrumData.data(),
+					&_spectrumData[(drawingDroppedFrames + 1) * _fftPoints],
+						heightOffset * _fftPoints * sizeof(double));
+				break;
+			case WaterfallFlowDirection::DOWN:
+				memmove(&_spectrumData[(drawingDroppedFrames + 1) * _fftPoints],
+					_spectrumData.data(),
+						heightOffset * _fftPoints * sizeof(double));
+				break;
+			}
+
 		}
 
 		if (drawingDroppedFrames > 0) {

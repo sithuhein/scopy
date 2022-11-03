@@ -24,6 +24,7 @@
 #if QWT_VERSION < 0x060000
 #include <gnuradio/qtgui/plot_waterfall.h>
 #else
+#include <QwtLinearColorMap>
 #include <qwt_interval.h>
 
 typedef QPointF QwtDoublePoint;
@@ -31,6 +32,22 @@ typedef QRectF QwtDoubleRect;
 typedef QwtInterval QwtDoubleInterval;
 
 #endif
+
+class ColorMap_DefaultDark : public QwtLinearColorMap
+{
+public:
+	ColorMap_DefaultDark() : QwtLinearColorMap(Qt::black, Qt::white)
+	{
+		addColorStop(0.16, Qt::black);
+		addColorStop(0.33, QColor(29, 32, 48));
+		addColorStop(0.5, QColor(74, 100, 255)); // scopy blue
+		addColorStop(0.66, QColor(255, 144, 0)); // scopy orange
+		addColorStop(0.83, Qt::white);
+	}
+};
+enum {
+    INTENSITY_COLOR_MAP_TYPE_DEFAULT_DARK = 7
+};
 
 /*!
  * \brief QWidget for displaying waterfall (spectrogram) plots.
@@ -67,14 +84,14 @@ public:
 
 	void plotNewData(const std::vector<double*> dataPoints,
 			 const int64_t numDataPoints,
-			 const double timePerFFT,
+			 double timePerFFT,
 			 gr::high_res_timer_type timestamp,
 			 const int droppedFrames);
 
 	// to be removed
 	void plotNewData(const double* dataPoints,
 			 const int64_t numDataPoints,
-			 const double timePerFFT,
+			 double timePerFFT,
 			 gr::high_res_timer_type timestamp,
 			 const int droppedFrames);
 
@@ -103,6 +120,7 @@ public:
 	void setCenterFrequency(const double freq);
 	void setUpdateTime(double t);
 	void setFlowDirection(WaterfallFlowDirection direction);
+	WaterfallFlowDirection getFlowDirection();
 public Q_SLOTS:
 	void
 	setIntensityColorMapType(const unsigned int, const int, const QColor, const QColor);
