@@ -32,7 +32,6 @@ private:
     int d_fftsize;
     gr::fft::fft_shift<float> d_fft_shift;
     float d_fftavg;
-    gr::fft::window::win_type d_wintype;
     std::vector<float> d_window;
     double d_center_freq;
     double d_bandwidth;
@@ -65,8 +64,6 @@ private:
     gr::high_res_timer_type d_update_time;
     gr::high_res_timer_type d_last_time;
 
-    void windowreset();
-    void buildwindow();
     void fftresize();
     void resize_bufs(int size);
     void check_clicked();
@@ -85,7 +82,7 @@ private:
 
 public:
     waterfall_sink_f_impl(int size,
-			  int wintype,
+			  std::vector<float> win,
 			  double fc,
 			  double bw,
 			  const std::string& name,
@@ -104,8 +101,7 @@ public:
     int fft_size() const override;
     void set_fft_average(const float fftavg) override;
     float fft_average() const override;
-//    void set_fft_window(const gr::fft::window::win_type win) override;
-//    gr::fft::window::win_type fft_window() override;
+    void set_fft_window(const std::vector<float> window) override;
 
     void set_frequency_range(const double centerfreq, const double bandwidth) override;
     void set_intensity_range(const double min, const double max) override;
@@ -138,6 +134,7 @@ public:
     int work(int noutput_items,
 	     gr_vector_const_void_star& input_items,
 	     gr_vector_void_star& output_items) override;
+//    void set_fft_window(const fft::window::win_type win);
 };
 
 } /* namespace adiscope */

@@ -29,7 +29,7 @@ namespace adiscope {
 
 waterfall_sink_f::sptr
 waterfall_sink_f::make(int fftsize,
-		       int wintype,
+		       std::vector<float> win,
 		       double fc,
 		       double bw,
 		       const std::string& name,
@@ -39,11 +39,11 @@ waterfall_sink_f::make(int fftsize,
 	//	    return gnuradio::make_block_sptr<waterfall_sink_f_impl>(
 	//	fftsize, wintype, fc, bw, name, nconnections, parent);
 	return gnuradio::get_initial_sptr
-			(new waterfall_sink_f_impl(fftsize, wintype, fc, bw, name, nconnections, plot));
+			(new waterfall_sink_f_impl(fftsize, win, fc, bw, name, nconnections, plot));
 }
 
 waterfall_sink_f_impl::waterfall_sink_f_impl(int fftsize,
-					     int wintype,
+					     std::vector<float> win,
 					     double fc,
 					     double bw,
 					     const std::string& name,
@@ -55,7 +55,7 @@ waterfall_sink_f_impl::waterfall_sink_f_impl(int fftsize,
 	  d_fftsize(fftsize),
 	  d_fft_shift(fftsize),
 	  d_fftavg(1.0),
-	  d_wintype((gr::fft::window::win_type)(wintype)),
+	  d_window(win),
 	  d_center_freq(fc),
 	  d_bandwidth(bw),
 	  d_name(name),
@@ -70,7 +70,6 @@ waterfall_sink_f_impl::waterfall_sink_f_impl(int fftsize,
 	  d_main_gui(plot)
 {
 	resize_bufs(d_fftsize);
-	//	buildwindow();
 
 	initialize();
 
@@ -125,7 +124,6 @@ void waterfall_sink_f_impl::initialize()
 
 	int numplots = (d_nconnections > 0) ? d_nconnections : 1;
 	//	    d_main_gui = new WaterfallDisplayForm(numplots, d_parent);
-	//	    set_fft_window(d_wintype);
 	set_fft_size(d_fftsize);
 	set_frequency_range(d_center_freq, d_bandwidth);
 
@@ -147,6 +145,11 @@ void waterfall_sink_f_impl::set_fft_size(const int fftsize)
 	//	    d_main_gui->setFFTSize(fftsize);
 	d_fftsize = fftsize;
 	fftresize();
+}
+
+void waterfall_sink_f_impl::set_fft_window(const std::vector<float> window)
+{
+    d_window = window;
 }
 
 int waterfall_sink_f_impl::fft_size() const { return d_fftsize; }
@@ -249,26 +252,6 @@ void waterfall_sink_f_impl::fft(float* data_out, const float* data_in, int size)
 	d_fft_shift.shift(data_out, size);
 }
 
-void waterfall_sink_f_impl::windowreset()
-{
-	//	gr::thread::scoped_lock lock(d_setlock);
-
-	//    gr::fft::window::win_type newwintype;
-	//    newwintype = d_main_gui->getFFTWindowType();
-	//    if (d_wintype != newwintype) {
-	//	d_wintype = newwintype;
-	//	buildwindow();
-	//    }
-}
-
-//void waterfall_sink_f_impl::buildwindow()
-//{
-//    d_window.clear();
-//    if (d_wintype != fft::window::WIN_NONE) {
-//	d_window = fft::window::build(d_wintype, d_fftsize);
-//    }
-//}
-
 void waterfall_sink_f_impl::resize_bufs(int size)
 {
 	// Resize residbuf and replace data.
@@ -303,9 +286,6 @@ void waterfall_sink_f_impl::fftresize()
 	// (throws away any currently held data, but who cares?)
 	d_fftsize = newfftsize;
 	d_index = 0;
-
-	// Reset window to reflect new size
-	//	buildwindow();
 
 	// Reset FFTW plan for new size
 	d_fft = std::make_unique<fft::fft_complex_fwd>(d_fftsize);
@@ -360,7 +340,6 @@ int waterfall_sink_f_impl::work(int noutput_items,
 	int j = 0;
 	const float* in = (const float*)input_items[0];
 
-	//	windowreset();
 	//	check_clicked();
 
 	for (int i = 0; i < noutput_items; i += d_fftsize) {
@@ -390,10 +369,8 @@ int waterfall_sink_f_impl::work(int noutput_items,
 							d_main_gui,
 							new WaterfallUpdateEvent(d_magbufs, d_fftsize, d_last_time));
 
-				//				std::cout << '\n';
-				//				std::cout << *std::max_element(d_magbufs[0].begin(), d_magbufs[0].end()) << '\n';
-				//				std::cout << *std::min_element(d_magbufs[0].begin(), d_magbufs[0].end()) << '\n';
-				//				std::cout << '\n';
+//								qDebug() << *std::max_element(d_magbufs[0].begin(), d_magbufs[0].end())
+//										<< *std::min_element(d_magbufs[0].begin(), d_magbufs[0].end()) << '\n';
 			}
 
 			d_index = 0;
@@ -453,7 +430,6 @@ void waterfall_sink_f_impl::handle_pdus(pmt::pmt_t msg)
 
 		// Update the FFT size from the application
 		//		fftresize();
-		//		windowreset();
 		//		check_clicked();
 
 		gr::high_res_timer_type ref_start =

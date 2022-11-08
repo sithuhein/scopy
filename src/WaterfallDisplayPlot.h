@@ -112,7 +112,6 @@ public:
 	void setAlpha(unsigned int which, int alpha);
 
 	int getNumRows() const;
-	void enableChannel(bool en, int id);
 
 	void setVisibleSampleCount(int count);
 	void autoScale();
@@ -121,6 +120,8 @@ public:
 	void setUpdateTime(double t);
 	void setFlowDirection(WaterfallFlowDirection direction);
 	WaterfallFlowDirection getFlowDirection();
+	int getEnabledChannelID();
+
 public Q_SLOTS:
 	void
 	setIntensityColorMapType(const unsigned int, const int, const QColor, const QColor);
@@ -134,6 +135,7 @@ public Q_SLOTS:
 	void enableLegend(bool en);
 	void setNumRows(int nrows);
 	void customEvent(QEvent *e);
+	void enableChannel(int id);
 
 Q_SIGNALS:
 	void updatedLowerIntensityLevel(const double);
@@ -149,7 +151,7 @@ private:
 	bool d_half_freq;
 	bool d_legend_enabled;
 	int d_nrows;
-	QMap<int, bool> channel_status;
+	int enabledChannelID;
 	int d_visible_samples;
 
 	double d_min_val;

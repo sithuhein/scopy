@@ -59,7 +59,7 @@ public:
      * \param parent a QWidget parent object, if any
      */
 	static sptr make(int size,
-			 int wintype,
+			 std::vector<float> win,
 			 double fc,
 			 double bw,
 			 const std::string& name,
@@ -76,6 +76,7 @@ public:
 	virtual void set_time_per_fft(const double t) = 0;
 	virtual void set_fft_average(const float fftavg) = 0;
 	virtual float fft_average() const = 0;
+	virtual void set_fft_window(const std::vector<float> window) = 0;
 
 	virtual void set_frequency_range(const double centerfreq, const double bandwidth) = 0;
 	virtual void set_intensity_range(const double min, const double max) = 0;
