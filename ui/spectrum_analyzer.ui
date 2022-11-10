@@ -496,7 +496,7 @@ min-width: 6em;
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>4</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="channelSettings">
               <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -1042,7 +1042,7 @@ min-width: 64px;
                     <x>0</x>
                     <y>0</y>
                     <width>298</width>
-                    <height>356</height>
+                    <height>523</height>
                    </rect>
                   </property>
                   <property name="sizePolicy">
@@ -1494,6 +1494,33 @@ color: rgba(255,255,255,51);
                     </layout>
                    </item>
                    <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_7">
+                     <item>
+                      <widget class="QLabel" name="label_8">
+                       <property name="text">
+                        <string>WATERFALL</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="Line" name="line_6">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QVBoxLayout" name="vLayout_waterfall"/>
+                   </item>
+                   <item>
                     <spacer name="verticalSpacer_6">
                      <property name="orientation">
                       <enum>Qt::Vertical</enum>
@@ -1548,7 +1575,7 @@ color: rgba(255,255,255,51);
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>268</width>
+                    <width>284</width>
                     <height>547</height>
                    </rect>
                   </property>
