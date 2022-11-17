@@ -12,7 +12,7 @@ REPO_LOCAL=/home/docker/scopy-flatpak
 cd "$REPO_LOCAL"
 # this ensures that latest master is pulled from origin while keeping file cache
 # the cache should be updated from time to time locally
-git fetch && git reset origin/master --hard
+git fetch && git reset origin/qt5-gr3.10 --hard
 
 # Run the preprocess step to generate org.adi.Scopy.json
 make preprocess
