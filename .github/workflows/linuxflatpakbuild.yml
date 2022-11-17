@@ -22,7 +22,7 @@ jobs:
             docker run --privileged \
                 -v `pwd`:$GITHUB_WORKSPACE:rw \
                 --env-file $GITHUB_WORKSPACE/CI/appveyor/gh-actions.envs \
-                analogdevices/scopy-build:flatpak /bin/bash -xe $GITHUB_WORKSPACE/CI/appveyor/inside_flatpak_docker.sh
+                analogdevices/scopy-build:flatpak-qt6 /bin/bash -xe $GITHUB_WORKSPACE/CI/appveyor/inside_flatpak_docker.sh
 
     - uses: actions/upload-artifact@v2
       with:
