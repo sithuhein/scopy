@@ -36,6 +36,18 @@ namespace pt = boost::posix_time;
 using namespace adiscope;
 #include <QDebug>
 
+class ColorMap_DefaultDark : public QwtLinearColorMap
+{
+public:
+    ColorMap_DefaultDark() : QwtLinearColorMap(Qt::black, QColor(255, 144, 0))
+    {
+	addColorStop(0.2, Qt::black);
+	addColorStop(0.4, Qt::darkCyan);
+	addColorStop(0.6, Qt::cyan);
+	addColorStop(0.8, QColor(255, 144, 0));
+    }
+};
+
 /***********************************************************************
  * Text scale widget to provide Y (time) axis text
  **********************************************************************/
@@ -144,7 +156,8 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 		d_spectrogram.push_back(new QwtPlotSpectrogram("Spectrogram"));
 		d_spectrogram[i]->setData(d_data[i]);
 		d_spectrogram[i]->setDisplayMode(QwtPlotSpectrogram::ImageMode, true);
-		d_spectrogram[i]->setColorMap(new ColorMap_MultiColor());
+//		d_spectrogram[i]->setColorMap(new ColorMap_MultiColor());
+		d_spectrogram[i]->setColorMap(new ColorMap_DefaultDark());
 #endif
 
 		// a hack around the fact that we aren't using plot curves for the
@@ -176,7 +189,7 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 				QwtEventPattern::MouseSelect2, Qt::RightButton, Qt::ControlModifier);
 	d_zoomer[0]->setMousePattern(QwtEventPattern::MouseSelect3, Qt::RightButton);
 
-	const QColor c(Qt::black);
+	const QColor c(Qt::white);
 	d_zoomer[0]->setRubberBandPen(c);
 	d_zoomer[0]->setTrackerPen(c);
 
@@ -184,7 +197,9 @@ WaterfallDisplayPlot::WaterfallDisplayPlot(int nplots, QWidget* parent)
 
 	d_xaxis_multiplier = 1;
 
-	setVisibleSampleCount(100);
+	setVisibleSampleCount(150);
+	d_grid->enableX(false);
+	d_grid->enableY(false);
 }
 
 WaterfallDisplayPlot::~WaterfallDisplayPlot() {}
@@ -218,6 +233,8 @@ void WaterfallDisplayPlot::autoScale()
 {
     double min_int = d_min_val;
     double max_int = d_max_val/1000000;
+
+    qDebug() << d_min_val << d_max_val;
 
     setIntensityRange(min_int, max_int);
 }
