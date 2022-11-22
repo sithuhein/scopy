@@ -233,6 +233,7 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 	measure_panel_init();
 #endif
 
+	receivedFFTData = false;
 	fft_plot = new FftDisplayPlot(m_adc_nb_channels, this);
 	fft_plot->disableLegend();
 
@@ -254,6 +255,7 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 
 	// waterfall plot
 
+	receivedWaterfallData = false;
 	waterfall_plot = new WaterfallDisplayPlot(m_adc_nb_channels, this);
 	waterfall_plot->setBtmHorAxisUnit("Hz");
 	waterfall_plot->setLeftVertAxisUnit("s");
@@ -529,14 +531,28 @@ SpectrumAnalyzer::SpectrumAnalyzer(struct iio_context *ctx, Filter *filt,
 		ui->runSingleWidget, &RunSingleWidget::toggle);
 
 
-	connect(fft_plot, SIGNAL(newData()),
-	        SLOT(singleCaptureDone()));
+	connect(fft_plot, &FftDisplayPlot::newFFTData, this, [=](){
+		receivedFFTData = true;
+		if (receivedWaterfallData) {
+			singleCaptureDone();
+
+			receivedWaterfallData = false;
+			receivedFFTData = false;
+		}
+	});
+
+	connect(waterfall_plot, &WaterfallDisplayPlot::newWaterfallData, this, [=](){
+		receivedWaterfallData = true;
+		if (receivedFFTData) {
+			singleCaptureDone();
+
+			receivedWaterfallData = false;
+			receivedFFTData = false;
+		}
+	});
 
 	connect(fft_plot, SIGNAL(currentAverageIndex(unsigned int, unsigned int)),
 		SLOT(onCurrentAverageIndexChanged(unsigned int, unsigned int)));
-
-	connect(waterfall_plot, SIGNAL(newData()),
-		SLOT(singleCaptureDone()));
 
 	const bool visible = (channels[crt_channel_id]->averageType() != FftDisplayPlot::AverageType::SAMPLE);
 	setCurrentAverageIndexLabel(crt_channel_id);

@@ -154,7 +154,7 @@ private Q_SLOTS:
 Q_SIGNALS:
 	void updatedLowerIntensityLevel(const double);
 	void updatedUpperIntensityLevel(const double);
-	void newData();
+	void newWaterfallData();
 
 private:
 	void _updateIntensityRangeDisplay();

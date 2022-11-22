@@ -620,7 +620,7 @@ void WaterfallDisplayPlot::plotNewData(const std::vector<double*> dataPoints,
 		}
 	}
 
-	Q_EMIT newData();
+	Q_EMIT newWaterfallData();
 }
 
 void WaterfallDisplayPlot::setIntensityRange(const double minIntensity,

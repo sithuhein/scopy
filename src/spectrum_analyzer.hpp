@@ -335,6 +335,9 @@ private:
 
 	bool canSwitchAverageHistory(FftDisplayPlot::AverageType avg_type);
 
+	bool receivedFFTData;
+	bool receivedWaterfallData;
+
 #ifdef SPECTRAL_MSR
 	//din capture plot
 	QList<std::shared_ptr<MeasurementData>> measurements(int chnIdx);
